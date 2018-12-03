@@ -6,7 +6,7 @@ using System.Windows.Forms;
 using MMFrame;
 
 using System.Text;
-using OpenCvSharp;
+//using OpenCvSharp;
 
 
 
@@ -26,6 +26,9 @@ namespace WindowsFormsApp1
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new Form1());
+
+            
+
 
             /*using (var img = new IplImage(@"C:\Lenna.jpg")) //while shown windows form, not shown image
             {
