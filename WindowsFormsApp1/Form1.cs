@@ -8,6 +8,7 @@ using TM = System.Timers;
 using System.Text;
 using System.IO;
 
+using AForge.Video;
 using AForge.Video.DirectShow;
 
 using System.ComponentModel;
@@ -23,6 +24,17 @@ namespace MMFrame
 {
     public partial class Form1 : Form
     {
+        //12/3追加分
+        //static readonly string InputMoviePath = @"D:\tmp\sample.mp4";
+        //static readonly TimeSpan Interval = TimeSpan.FromSeconds(5);
+
+        /*private FilterInfoCollection videoDevices;
+        private VideoCaptureDevice videoSource;
+        private VideoCapabilities[] videoCapabilities;
+
+        private Bitmap workImage;*/
+
+
         public Form1()
         {
             InitializeComponent();
@@ -43,47 +55,202 @@ namespace MMFrame
             */
 
 
+            {
+                //12/3追加分               
+                // パイプを使って指定時間の画像を一枚抽出する
+                //var image = new ImageExtractor().ExtractImageByPipe(InputMoviePath, TimeSpan.FromSeconds(10));
+                //image.Save(@"D:\tmp\pipe.jpg");
+            }
 
 
         }
+        /*
+        public class ImageExtractor
+        {
+            static readonly string FfmpegPath = @"C:\Lib\ffmpeg-20170824-f0f4888-win64-static\bin\ffmpeg.exe";
+            static readonly string FfprobePath = @"C:\Lib\ffmpeg-20170824-f0f4888-win64-static\bin\ffprobe.exe";
+
+            /// <summary>動画ファイルからパイプを用いて画像を抽出する</summary>
+            public Image ExtractImageByPipe(string inputMoviePath, TimeSpan extractTime)
+            {
+                var arguments = $"-ss {extractTime.TotalSeconds} -i \"{inputMoviePath}\" -vframes 1 -f image2 pipe:1";
+
+                using (var process = new Process())
+
+                {
+                    process.StartInfo = new ProcessStartInfo
+                    {
+                        FileName = FfmpegPath,
+                        Arguments = arguments,
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                    };
+                    process.Start();
+                    var image = Image.FromStream(process.StandardOutput.BaseStream);
+                    process.WaitForExit();
+                    return image;
+                }
+
+            }
+        }
+
+            */
 
         //up is added(videocapture)
         private void Form1_Load(object sender, EventArgs e)
+    {
+
+        // ビデオキャプチャデバイスを選択するダイアログの生成
+        var form = new VideoCaptureDeviceForm();
+        // 選択ダイアログを開く
+        if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
-            /*
-            // ビデオキャプチャデバイスを選択するダイアログの生成
-            var form = new VideoCaptureDeviceForm();
-            // 選択ダイアログを開く
-            if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                // 選択されたデバイスをVideoSourcePlayerのソースに設定
-                videoSourcePlayer1.VideoSource = form.VideoDevice;
+            // 選択されたデバイスをVideoSourcePlayerのソースに設定
+            videoSourcePlayer1.VideoSource = form.VideoDevice;
+
+                
                 // ビデオキャプチャのスタート
                 videoSourcePlayer1.Start();
-            }
-            */
         }
+
+    }
+
+        
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
-            /*
+            
             // 閉じるときの処理
             if (videoSourcePlayer1.VideoSource != null && videoSourcePlayer1.VideoSource.IsRunning)
             {
                 videoSourcePlayer1.VideoSource.SignalToStop();
                 videoSourcePlayer1.VideoSource = null;
             }
-            */
+            
         }
         //down is added(videocapture)
 
+        private void button4_Click(object sender, EventArgs e)
+        {
+            CvColor[] colors = new CvColor[]{
+                new CvColor(0,0,255),
+                new CvColor(0,128,255),
+                new CvColor(0,255,255),
+                new CvColor(0,255,0),
+                new CvColor(255,128,0),
+                new CvColor(255,255,0),
+                new CvColor(255,0,0),
+                new CvColor(255,0,255),
+            };
+
+            const double Scale = 1.14;
+            const double ScaleFactor = 1.0850;
+            const int MinNeighbors = 2;
+
+            //using (IplImage img = new IplImage(@"C:\Yalta.jpg", LoadMode.Color))
+            using (IplImage img = new IplImage(@"C:\Lenna.jpg", LoadMode.Color))
+            using (IplImage smallImg = new IplImage(new CvSize(Cv.Round(img.Width / Scale), Cv.Round(img.Height / Scale)), BitDepth.U8, 1))
+            {
+                // 顔検出用の画像の生成
+                using (IplImage gray = new IplImage(img.Size, BitDepth.U8, 1))
+                {
+                    Cv.CvtColor(img, gray, ColorConversion.BgrToGray);
+                    Cv.Resize(gray, smallImg, Interpolation.Linear);
+                    Cv.EqualizeHist(smallImg, smallImg);
+                }
+
+                //using (CvHaarClassifierCascade cascade = Cv.Load<CvHaarClassifierCascade>(Const.XmlHaarcascade))  // どっちでも可
+                using (CvHaarClassifierCascade cascade = CvHaarClassifierCascade.FromFile("haarcascade_frontalface_default.xml"))    // 
+                using (CvMemStorage storage = new CvMemStorage())
+                {
+                    storage.Clear();
+
+                    // 顔の検出
+                    Stopwatch watch = Stopwatch.StartNew();
+                    CvSeq<CvAvgComp> faces = Cv.HaarDetectObjects(smallImg, cascade, storage, ScaleFactor, MinNeighbors, 0, new CvSize(30, 30), new CvSize(1000, 1000)); //new CvSize(30, 30)
+                    watch.Stop();
+                    Console.WriteLine("detection time = {0}ms\n", watch.ElapsedMilliseconds);
+
+                    // 検出した箇所にまるをつける
+                    for (int i = 0; i < faces.Total; i++)
+                    {
+                        CvRect r = faces[i].Value.Rect;
+                        CvPoint center = new CvPoint
+                        {
+                            X = Cv.Round((r.X + r.Width * 0.5) * Scale),
+                            Y = Cv.Round((r.Y + r.Height * 0.5) * Scale)
+                        };
+                        int radius = Cv.Round((r.Width + r.Height) * 0.25 * Scale);
+                        img.Circle(center, radius, colors[i % 8], 3, LineType.AntiAlias, 0);
+                    }
+                }
+                CvWindow.ShowImages(img);
+            }
+        }
 
 
         private void button1_Click(object sender, EventArgs e)
         {
+            
             // 現在のフレームをビットマップに保存
             var bmp = videoSourcePlayer1.GetCurrentVideoFrame();
             bmp.Save("a.bmp");
+
+            CvColor[] colors = new CvColor[]{
+                new CvColor(0,0,255),
+                new CvColor(0,128,255),
+                new CvColor(0,255,255),
+                new CvColor(0,255,0),
+                new CvColor(255,128,0),
+                new CvColor(255,255,0),
+                new CvColor(255,0,0),
+                new CvColor(255,0,255),
+            };
+
+            const double Scale = 1.14;
+            const double ScaleFactor = 1.0850;
+            const int MinNeighbors = 2;
+
+            //using (IplImage img = new IplImage(@"C:\Yalta.jpg", LoadMode.Color))
+            using (IplImage img = new IplImage(@"a.bmp", LoadMode.Color))
+            using (IplImage smallImg = new IplImage(new CvSize(Cv.Round(img.Width / Scale), Cv.Round(img.Height / Scale)), BitDepth.U8, 1))
+            {
+                // 顔検出用の画像の生成
+                using (IplImage gray = new IplImage(img.Size, BitDepth.U8, 1))
+                {
+                    Cv.CvtColor(img, gray, ColorConversion.BgrToGray);
+                    Cv.Resize(gray, smallImg, Interpolation.Linear);
+                    Cv.EqualizeHist(smallImg, smallImg);
+                }
+
+                //using (CvHaarClassifierCascade cascade = Cv.Load<CvHaarClassifierCascade>(Const.XmlHaarcascade))  // どっちでも可
+                using (CvHaarClassifierCascade cascade = CvHaarClassifierCascade.FromFile("haarcascade_frontalface_default.xml"))    // 
+                using (CvMemStorage storage = new CvMemStorage())
+                {
+                    storage.Clear();
+
+                    // 顔の検出
+                    Stopwatch watch = Stopwatch.StartNew();
+                    CvSeq<CvAvgComp> faces = Cv.HaarDetectObjects(smallImg, cascade, storage, ScaleFactor, MinNeighbors, 0, new CvSize(30, 30), new CvSize(1000, 1000)); //new CvSize(30, 30)
+                    watch.Stop();
+                    Console.WriteLine("detection time = {0}ms\n", watch.ElapsedMilliseconds);
+
+                    // 検出した箇所にまるをつける
+                    for (int i = 0; i < faces.Total; i++)
+                    {
+                        CvRect r = faces[i].Value.Rect;
+                        CvPoint center = new CvPoint
+                        {
+                            X = Cv.Round((r.X + r.Width * 0.5) * Scale),
+                            Y = Cv.Round((r.Y + r.Height * 0.5) * Scale)
+                        };
+                        int radius = Cv.Round((r.Width + r.Height) * 0.25 * Scale);
+                        img.Circle(center, radius, colors[i % 8], 3, LineType.AntiAlias, 0);
+                    }
+                }
+                CvWindow.ShowImages(img);
+            }
 
         }
 
@@ -223,66 +390,10 @@ namespace MMFrame
 
         private void textBox2_TextChanged(object sender, EventArgs e)
         {
-
+            
         }
 
-        private void button4_Click(object sender, EventArgs e)
-        {
-            CvColor[] colors = new CvColor[]{
-                new CvColor(0,0,255),
-                new CvColor(0,128,255),
-                new CvColor(0,255,255),
-                new CvColor(0,255,0),
-                new CvColor(255,128,0),
-                new CvColor(255,255,0),
-                new CvColor(255,0,0),
-                new CvColor(255,0,255),
-            };
-
-            const double Scale = 1.14;
-            const double ScaleFactor = 1.0850;
-            const int MinNeighbors = 2;
-
-            //using (IplImage img = new IplImage(@"C:\Yalta.jpg", LoadMode.Color))
-            using (IplImage img = new IplImage(@"C:\Lenna.jpg", LoadMode.Color))
-            using (IplImage smallImg = new IplImage(new CvSize(Cv.Round(img.Width / Scale), Cv.Round(img.Height / Scale)), BitDepth.U8, 1))
-            {
-                // 顔検出用の画像の生成
-                using (IplImage gray = new IplImage(img.Size, BitDepth.U8, 1))
-                {
-                    Cv.CvtColor(img, gray, ColorConversion.BgrToGray);
-                    Cv.Resize(gray, smallImg, Interpolation.Linear);
-                    Cv.EqualizeHist(smallImg, smallImg);
-                }
-
-                //using (CvHaarClassifierCascade cascade = Cv.Load<CvHaarClassifierCascade>(Const.XmlHaarcascade))  // どっちでも可
-                using (CvHaarClassifierCascade cascade = CvHaarClassifierCascade.FromFile("haarcascade_frontalface_default.xml"))    // 
-                using (CvMemStorage storage = new CvMemStorage())
-                {
-                    storage.Clear();
-
-                    // 顔の検出
-                    Stopwatch watch = Stopwatch.StartNew();
-                    CvSeq<CvAvgComp> faces = Cv.HaarDetectObjects(smallImg, cascade, storage, ScaleFactor, MinNeighbors, 0, new CvSize(30, 30), new CvSize(1000, 1000)); //new CvSize(30, 30)
-                    watch.Stop();
-                    Console.WriteLine("detection time = {0}ms\n", watch.ElapsedMilliseconds);
-
-                    // 検出した箇所にまるをつける
-                    for (int i = 0; i < faces.Total; i++)
-                    {
-                        CvRect r = faces[i].Value.Rect;
-                        CvPoint center = new CvPoint
-                        {
-                            X = Cv.Round((r.X + r.Width * 0.5) * Scale),
-                            Y = Cv.Round((r.Y + r.Height * 0.5) * Scale)
-                        };
-                        int radius = Cv.Round((r.Width + r.Height) * 0.25 * Scale);
-                        img.Circle(center, radius, colors[i % 8], 3, LineType.AntiAlias, 0);
-                    }
-                }
-                CvWindow.ShowImages(img);
-            }
-        }
+        
     
 
 
