@@ -283,7 +283,7 @@ namespace MMFrame
                     append = true;
                 }
 
-                using (var sw = new System.IO.StreamWriter(@"test.csv", append))//C:/users/koda/source/repos/windowsformapp1/bin/x64/debug
+                using (var sw = new System.IO.StreamWriter(@"keyboard.csv", append))//C:/users/koda/source/repos/windowsformapp1/bin/x64/debug
                 {
                    
                    //Debug.WriteLine("debug:"+inputnum+"\r\n");
@@ -303,10 +303,48 @@ namespace MMFrame
             return csv_flag;
         }
 
+        static void ReadCSV(int begin_rownum,int end_rownum)
+        {
+            int row_num = 1;
+
+            try
+            {
+                //open csvfile
+                using (var sr = new System.IO.StreamReader(@"keyboard.csv"))
+                {
+                    while (!sr.EndOfStream)
+                    {
+                        var line = sr.ReadLine();
+                        var values = line.Split(',');
+
+                        //出力
+                        if (begin_rownum <= row_num && end_rownum >= row_num)
+                        {
+                            foreach (var value in values)
+                            {
+                                System.Console.WriteLine("reserve_num is " + "{0}", value);
+                                
+                            }
+                        }
+                        //System.Console.WriteLine();
+
+                        row_num++;
+                    }
+                }
+            }
+            catch (System.Exception e)
+            {
+                // failure file open
+                System.Console.WriteLine(e.Message);
+            }
+
+        }
+
+
         void hookKeyboardTest(ref MMFrame.Windows.GlobalHook.KeyboardHook.StateKeyboard s)
         {
-            textBox1.Text = s.Stroke + " : " + s.Key + ":" + s.key_count_num + "\r\n" + textBox1.Text;
-            Debug.WriteLine(s.Stroke + " : " + s.Key +":"+s.key_count_num+"\r\n" + textBox1.Text);
+            //textBox1.Text = s.Stroke + " : " + s.Key + ":" + s.key_count_num + "\r\n" + textBox1.Text;
+            //Debug.WriteLine(s.Stroke + " : " + s.Key +":"+s.key_count_num+"\r\n" + textBox1.Text);
             sum_interval_num = s.key_count_num;
         }
 
@@ -326,11 +364,12 @@ namespace MMFrame
             textBox3.Text = keep_interval_num + "\r\n" + textBox3.Text;
             Debug.WriteLine(keep_interval_num + "\r\n"+textBox3.Text);
 
-            Console.WriteLine("countnumber = {0}ms\n", frametest);
+            //Console.WriteLine("countnumber = {0}ms\n", frametest);
 
             send_csv_flag=WriteCSV(keep_interval_num,send_csv_flag);
 
-            
+
+
         }
 
 
@@ -378,7 +417,7 @@ namespace MMFrame
                     Stopwatch watch = Stopwatch.StartNew();
                     CvSeq<CvAvgComp> faces = Cv.HaarDetectObjects(smallImg, cascade, storage, ScaleFactor, MinNeighbors, 0, new CvSize(30, 30), new CvSize(1000, 1000)); //new CvSize(30, 30)
                     watch.Stop();
-                    Console.WriteLine("detection time = {0}ms\n", watch.ElapsedMilliseconds);
+                    //Console.WriteLine("detection time = {0}ms\n", watch.ElapsedMilliseconds);
 
                     // 検出した箇所にまるをつける
                     for (int i = 0; i < faces.Total; i++)
@@ -399,6 +438,24 @@ namespace MMFrame
             frametest++;
 
         }
+
+        int send_begin_rownum = 1;
+        int send_end_rownum = 1;
+
+        void timer3_test(object sender, EventArgs e)/*judge keyboard&face_recognize*/
+        {
+            if (send_csv_flag == 1)
+            { 
+            ReadCSV(send_begin_rownum, send_end_rownum);
+            }
+
+            if (send_end_rownum >= 6)
+            {
+                send_begin_rownum += 1;
+            }
+            send_end_rownum += 1;
+        }
+
 
 
         private void button2_Click(object sender, EventArgs e)
@@ -427,8 +484,14 @@ namespace MMFrame
             timer2.Interval = 33;
             timer2.Enabled = true;
             timer2.Tick += new EventHandler(this.timer2_test);
-            //timer1.Tick += new EventHandler(hookKeyboardTest_interval);
             timer2.Start();
+
+            var timer3 = new Timer();
+            timer3.Interval = 5000;
+            timer3.Enabled = true;
+            timer3.Tick += new EventHandler(this.timer3_test);
+            //timer1.Tick += new EventHandler(hookKeyboardTest_interval);
+            timer3.Start();
 
 
             MMFrame.Windows.GlobalHook.KeyboardHook.AddEvent(hookKeyboardTest);
@@ -471,8 +534,10 @@ namespace MMFrame
             
         }
 
-        
-    
+       
+
+
+
 
 
 
