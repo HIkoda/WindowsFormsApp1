@@ -133,6 +133,10 @@ namespace MMFrame
 
         private void button4_Click(object sender, EventArgs e)
         {
+            var bmp = videoSourcePlayer1.GetCurrentVideoFrame();
+            bmp.Save("a.bmp");
+
+
             CvColor[] colors = new CvColor[]{
                 new CvColor(0,0,255),
                 new CvColor(0,128,255),
@@ -149,7 +153,7 @@ namespace MMFrame
             const int MinNeighbors = 2;
 
             //using (IplImage img = new IplImage(@"C:\Yalta.jpg", LoadMode.Color))
-            using (IplImage img = new IplImage(@"C:\Lenna.jpg", LoadMode.Color))
+            using (IplImage img = new IplImage(@"a.bmp", LoadMode.Color))
             using (IplImage smallImg = new IplImage(new CvSize(Cv.Round(img.Width / Scale), Cv.Round(img.Height / Scale)), BitDepth.U8, 1))
             {
                 // 顔検出用の画像の生成
@@ -192,7 +196,7 @@ namespace MMFrame
 
         private void button1_Click(object sender, EventArgs e)
         {
-            
+            /*
             // 現在のフレームをビットマップに保存
             var bmp = videoSourcePlayer1.GetCurrentVideoFrame();
             bmp.Save("a.bmp");
@@ -251,7 +255,7 @@ namespace MMFrame
                 }
                 CvWindow.ShowImages(img);
             }
-
+            */
         }
 
 
@@ -263,22 +267,29 @@ namespace MMFrame
         int  before_interval_num;
         int  sum_interval_num;
         int  keep_interval_num;//differnce (sum-before_sum)
+
+        int send_csv_flag;
+        
         
 
 
-        private static void WriteCSV(int inputnum) {
-            try {
+       public static int WriteCSV(int inputnum,int csv_flag) {
+        
+                try {
+
                 var append=false;
+
+                if (csv_flag == 1) {
+                    append = true;
+                }
+
                 using (var sw = new System.IO.StreamWriter(@"test.csv", append))//C:/users/koda/source/repos/windowsformapp1/bin/x64/debug
                 {
-                    /*for (int i = 0; i < inputnum.Length; ++i)
-                    {
-                        // 
-                        sw.WriteLine("{0}, {1}, {2},", x[i], y[i], z[i]);
-                    }*/
+                   
                    //Debug.WriteLine("debug:"+inputnum+"\r\n");
                     //Debug.WriteLine("debug:" + "test" + "\r\n");
                     sw.WriteLine("{0},",inputnum);
+                    csv_flag = 1;
                     sw.Close();
                 }
 
@@ -289,7 +300,7 @@ namespace MMFrame
                 // if file can't open
                 System.Console.WriteLine(e.Message);
             }
-
+            return csv_flag;
         }
 
         void hookKeyboardTest(ref MMFrame.Windows.GlobalHook.KeyboardHook.StateKeyboard s)
@@ -304,8 +315,10 @@ namespace MMFrame
             return s.key_count_num;
         }
 
+
+        int frametest;
         
-        void timer1_test(object sender, EventArgs e)
+        void timer1_test(object sender, EventArgs e)/*keyboard hook*/
         {
             keep_interval_num = sum_interval_num - before_interval_num;
             before_interval_num = sum_interval_num;
@@ -313,22 +326,79 @@ namespace MMFrame
             textBox3.Text = keep_interval_num + "\r\n" + textBox3.Text;
             Debug.WriteLine(keep_interval_num + "\r\n"+textBox3.Text);
 
-            WriteCSV(keep_interval_num);
+            Console.WriteLine("countnumber = {0}ms\n", frametest);
+
+            send_csv_flag=WriteCSV(keep_interval_num,send_csv_flag);
 
             
         }
 
-        /*void timer2_test(object sender, EventArgs e)
-        {
-            
-            Debug.WriteLine("timer limited" + "\r\n");
-            MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
-            MMFrame.Windows.GlobalHook.KeyboardHook.Pause();
-            limited_timer.Stop();
-            timer1.Stop();
-            return;
 
-        }*/
+
+        void timer2_test(object sender, EventArgs e)/*face recognize (1frame)*/
+        {
+            var bmp = videoSourcePlayer1.GetCurrentVideoFrame();
+            bmp.Save("a.bmp");
+
+            CvColor[] colors = new CvColor[]{
+                new CvColor(0,0,255),
+                new CvColor(0,128,255),
+                new CvColor(0,255,255),
+                new CvColor(0,255,0),
+                new CvColor(255,128,0),
+                new CvColor(255,255,0),
+                new CvColor(255,0,0),
+                new CvColor(255,0,255),
+            };
+
+            const double Scale = 1.14;
+            const double ScaleFactor = 1.0850;
+            const int MinNeighbors = 2;
+
+            //using (IplImage img = new IplImage(@"C:\Yalta.jpg", LoadMode.Color))
+            using (IplImage img = new IplImage(@"a.bmp", LoadMode.Color))
+            //using (IplImage img = new IplImage(@"C:\Lenna.jpg", LoadMode.Color))
+            using (IplImage smallImg = new IplImage(new CvSize(Cv.Round(img.Width / Scale), Cv.Round(img.Height / Scale)), BitDepth.U8, 1))
+            {
+                // 顔検出用の画像の生成
+                using (IplImage gray = new IplImage(img.Size, BitDepth.U8, 1))
+                {
+                    Cv.CvtColor(img, gray, ColorConversion.BgrToGray);
+                    Cv.Resize(gray, smallImg, Interpolation.Linear);
+                    Cv.EqualizeHist(smallImg, smallImg);
+                }
+
+                //using (CvHaarClassifierCascade cascade = Cv.Load<CvHaarClassifierCascade>(Const.XmlHaarcascade))  // どっちでも可
+                using (CvHaarClassifierCascade cascade = CvHaarClassifierCascade.FromFile("haarcascade_frontalface_default.xml"))    // 
+                using (CvMemStorage storage = new CvMemStorage())
+                {
+                    storage.Clear();
+
+                    // 顔の検出
+                    Stopwatch watch = Stopwatch.StartNew();
+                    CvSeq<CvAvgComp> faces = Cv.HaarDetectObjects(smallImg, cascade, storage, ScaleFactor, MinNeighbors, 0, new CvSize(30, 30), new CvSize(1000, 1000)); //new CvSize(30, 30)
+                    watch.Stop();
+                    Console.WriteLine("detection time = {0}ms\n", watch.ElapsedMilliseconds);
+
+                    // 検出した箇所にまるをつける
+                    for (int i = 0; i < faces.Total; i++)
+                    {
+                        CvRect r = faces[i].Value.Rect;
+                        CvPoint center = new CvPoint
+                        {
+                            X = Cv.Round((r.X + r.Width * 0.5) * Scale),
+                            Y = Cv.Round((r.Y + r.Height * 0.5) * Scale)
+                        };
+                        int radius = Cv.Round((r.Width + r.Height) * 0.25 * Scale);
+                        img.Circle(center, radius, colors[i % 8], 3, LineType.AntiAlias, 0);
+                    }
+                }
+                // CvWindow.ShowImages(img);
+            }
+
+            frametest++;
+
+        }
 
 
         private void button2_Click(object sender, EventArgs e)
@@ -353,10 +423,18 @@ namespace MMFrame
             //timer1.Tick += new EventHandler(hookKeyboardTest_interval);
             timer1.Start();
 
+            var timer2 = new Timer();
+            timer2.Interval = 33;
+            timer2.Enabled = true;
+            timer2.Tick += new EventHandler(this.timer2_test);
+            //timer1.Tick += new EventHandler(hookKeyboardTest_interval);
+            timer2.Start();
+
 
             MMFrame.Windows.GlobalHook.KeyboardHook.AddEvent(hookKeyboardTest);
 
             //timer.Elapsed += new TM.ElapsedEventHandler(timer1_test);
+
 
             MMFrame.Windows.GlobalHook.KeyboardHook.Start();
         }
