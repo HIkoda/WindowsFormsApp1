@@ -18,27 +18,37 @@ using System.Linq;
 using System.Threading.Tasks;
 using OpenCvSharp;
 
-
+using MMFrame;
+using WindowsFormsApp1;
 
 namespace MMFrame
 {
-    public partial class Form1 : Form
+    public partial class Form1 : WindowsFormsApp1.WindowsFormsApp1_orig
     {
+        public int standard_touch_value = WindowsFormsApp1_orig.standard_touch_value_orig;//キーボード打鍵のしきい値
+        public int frontface_check_value = WindowsFormsApp1_orig.frontface_check_value_orig;//キーボード打鍵のしきい値
+
 
         public Form1()
         {
             InitializeComponent();
             Debug.WriteLine("start!!!!!!!!");
 
+            this.start_log();
+
             System.Windows.Forms.Timer timer1 = new System.Windows.Forms.Timer();
             System.Windows.Forms.Timer timer2 = new System.Windows.Forms.Timer();
             System.Windows.Forms.Timer timer3 = new System.Windows.Forms.Timer();
             System.Windows.Forms.Timer timer4 = new System.Windows.Forms.Timer();
 
+            System.Windows.Forms.Timer timer5 = new System.Windows.Forms.Timer();
+
             loop_timer1(timer1_test);
             loop_timer2(timer2_test);
             loop_timer3(timer3_test);
             loop_timer4(timer4_test);
+
+            loop_timer5(timer5_test);
 
         }
 
@@ -74,7 +84,12 @@ namespace MMFrame
                 videoSourcePlayer1.VideoSource.SignalToStop();
                 videoSourcePlayer1.VideoSource = null;
             }
+            MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
 
+            timer1.Enabled = false;
+            timer2.Enabled = false;
+            timer3.Enabled = false;
+            timer4.Enabled = false;
         }
         //down is added(videocapture)
 
@@ -197,16 +212,16 @@ namespace MMFrame
                         sw.Close();
                     }
                 }
-                 if (judge_which_csv == 1)//frontface
-                 {
-                     using (var sw = new System.IO.StreamWriter(@"frontface.csv", append))//C:/users/koda/source/repos/windowsformapp1/bin/x64/debug
-                     {
-                         sw.WriteLine("{0},", inputnum);
-                         csv_flag = 1;
-                        
+                if (judge_which_csv == 1)//frontface
+                {
+                    using (var sw = new System.IO.StreamWriter(@"frontface.csv", append))//C:/users/koda/source/repos/windowsformapp1/bin/x64/debug
+                    {
+                        sw.WriteLine("{0},", inputnum);
+                        csv_flag = 1;
+
                         sw.Close();
-                     }
-                 }
+                    }
+                }
 
             }
             catch (System.Exception e)
@@ -298,7 +313,6 @@ namespace MMFrame
             System.Console.WriteLine("frontfacenumber is " + "{0}", end_facerownum);
             int row_num = 1;
             int frontface_count = 0;
-            int average = 0;
 
             int check_string;
 
@@ -386,8 +400,8 @@ namespace MMFrame
             keep_interval_num = sum_interval_num - before_interval_num;
             before_interval_num = sum_interval_num;
 
-            textBox3.Text = keep_interval_num + "\r\n" + textBox3.Text;
-            Debug.WriteLine(keep_interval_num + "\r\n" + textBox3.Text);
+            //textBox3.Text = keep_interval_num + "\r\n" + textBox3.Text;
+            //Debug.WriteLine(keep_interval_num + "\r\n" + textBox3.Text);
 
 
             //Console.WriteLine("countnumber = {0}ms\n", frametest);
@@ -482,6 +496,7 @@ namespace MMFrame
         int send_begin_rownum = 1;
         int send_end_rownum = 1;
         int send_end_facerownum = 0;
+        //private Form2 Form2;
 
         void timer3_test(object sender, EventArgs e)/*judge keyboard&face_recognize*/
         {
@@ -505,21 +520,36 @@ namespace MMFrame
             send_end_rownum += 1;
             send_end_facerownum += 1;
 
+            // standard_touch_value = 1;//キーボード打鍵のしきい値
+            // frontface_check_value = 1;//キーボード打鍵のしきい値
 
-            if (send_keyboard_csv_flag == 1 && average_keyboard_touch < 1)//キーボード打鍵はここの値を変える
+            if (send_keyboard_csv_flag == 1 && average_keyboard_touch < standard_touch_value)//キーボード打鍵はここの値を変える
             {
-                
-                MessageBox.Show("疲れていませんか?", "メッセージ",
-                    MessageBoxButtons.YesNoCancel,MessageBoxIcon.Exclamation,MessageBoxDefaultButton.Button2);
-                
-                System.Console.WriteLine("warning!!!");
+
+                //MessageBox.Show("作業が進んでいません。頑張りましょう", "メッセージ",
+                //MessageBoxButtons.YesNoCancel,MessageBoxIcon.Exclamation,MessageBoxDefaultButton.Button2);
+
+                //MessageBox.Show("作業が進んでいません。頑張りましょう", "メッセージ",
+                //MessageBoxButtons.OK);
+
+                //Application.Run(new Form2());
+                Form2 newform = new Form2();
+                newform.Show();
+                //Form2 = new Form2();
+                //Form2.show();
+
             }
-            else if (send_frontface_csv_flag == 1 && average_keyboard_touch > 1)//顔の向きはここの値を変える
+            else if (send_frontface_csv_flag == 1 && frontface_check < frontface_check_value)//顔の向きはここの値を変える
             {
-                /*
-                MessageBox.Show("疲れていませんか?", "メッセージ",
-                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button2);
-                */          
+
+                //MessageBox.Show("よそ見をしている回数が多いようです。頑張りましょう", "メッセージ",
+                //MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button2);
+
+                // MessageBox.Show("よそ見をしている回数が多いようです。頑張りましょう", "メッセージ",
+                //MessageBoxButtons.OK);
+                Form3 newform = new Form3();
+                newform.Show();
+
             }
 
             //frontface_check_num = 0;
@@ -556,11 +586,19 @@ namespace MMFrame
         public void loop_timer4(EventHandler eventHandler)
         {
             timer4.Tick += new EventHandler(eventHandler);
-            timer4.Interval = 15000;
+            timer4.Interval = WindowsFormsApp1_orig.limit_time;
+            //timer3.Enabled = false;
+
+        }
+        public void loop_timer5(EventHandler eventHandler)
+        {
+            timer5.Tick += new EventHandler(eventHandler);
+            timer5.Interval = 50;
             //timer3.Enabled = false;
 
         }
 
+        /*
         private void button2_Click(object sender, EventArgs e)
         {
             if (MMFrame.Windows.GlobalHook.KeyboardHook.IsHooking)
@@ -569,37 +607,29 @@ namespace MMFrame
                 return;
             }
 
-            /*var timer1 = new Timer();
-            timer1.Interval = 5000;*/
+           
             timer1.Enabled = true;
-            /*timer1.Tick += new EventHandler(this.timer1_test);*/
-            //timer1.Tick += new EventHandler(hookKeyboardTest_interval);
-            //timer1.Start();
+            
 
-            /*var timer2 = new Timer();
-            timer2.Interval = 100;*/
+            
             timer2.Enabled = true;
-            //timer2.Tick += new EventHandler(this.timer2_test);
-            //timer2.Start();
+            
 
-            /*var timer3 = new Timer();
-            timer3.Interval = 5000;*/
+            
             timer3.Enabled = true;
-            //timer3.Tick += new EventHandler(this.timer3_test);
-            //timer1.Tick += new EventHandler(hookKeyboardTest_interval);
-            //timer3.Start();
+            
             timer4.Enabled = true;
 
 
             MMFrame.Windows.GlobalHook.KeyboardHook.AddEvent(hookKeyboardTest);
 
-            //timer.Elapsed += new TM.ElapsedEventHandler(timer1_test);
+            
 
 
             MMFrame.Windows.GlobalHook.KeyboardHook.Start();
-            
+            this.Hide();
         }
-
+        */
 
 
         /*void hookKeyboardStop(ref MMFrame.Windows.GlobalHook.KeyboardHook.StateKeyboard s)
@@ -638,16 +668,12 @@ namespace MMFrame
 
         }
 
-        private void button3_Click_1(object sender, EventArgs e)
+        /*private void button3_Click_1(object sender, EventArgs e)
         {
             MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
             //videoplayer_stop_flag = 1;
 
-            /*
-            timer1.Stop();
-            timer2.Stop();
-            timer3.Stop();
-            */
+           
             timer1.Enabled = false;
             timer2.Enabled = false;
             timer3.Enabled = false;
@@ -660,16 +686,18 @@ namespace MMFrame
                 videoSourcePlayer1.VideoSource = null;
             }
 
-            MessageBox.Show("終了しましょう", "メッセージ",
-                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button2);
+            //MessageBox.Show("作業を終了して休憩しましょう", "メッセージ",
+                    //MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button2);
+            //MessageBox.Show("作業を終了して休憩しましょう", "メッセージ",
+                    //MessageBoxButtons.OK);
             return;
-        }
+        }*/
 
 
 
         void timer4_test(object sender, EventArgs e)
         {
-            MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
+            //MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
             //videoplayer_stop_flag = 1;
 
             /*
@@ -677,22 +705,101 @@ namespace MMFrame
             timer2.Stop();
             timer3.Stop();
             */
-            timer1.Enabled = false;
+
+            /*timer1.Enabled = false;
             timer2.Enabled = false;
             timer3.Enabled = false;
-            timer4.Enabled = false;
+            timer4.Enabled = false;*/
 
             ///button3.Enabled = false;
 
-            if (videoSourcePlayer1.VideoSource != null && videoSourcePlayer1.VideoSource.IsRunning)
+            /*if (videoSourcePlayer1.VideoSource != null && videoSourcePlayer1.VideoSource.IsRunning)
             {
                 videoSourcePlayer1.VideoSource.SignalToStop();
                 videoSourcePlayer1.VideoSource = null;
+            }*/
+
+            //MessageBox.Show("終了しましょう", "メッセージ",
+            //MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button2);
+            //MessageBox.Show("作業を終了して休憩しましょう", "メッセージ",
+            //MessageBoxButtons.OK);
+
+            //MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
+            WindowsFormsApp1_orig.timer_start_flag = 0;
+            Form4 newform = new Form4();
+            newform.Show();
+
+            //return;
+        }
+
+        void timer5_test(object sender, EventArgs e)
+        {
+            if (WindowsFormsApp1_orig.timer_start_flag == 0) {
+                if (MMFrame.Windows.GlobalHook.KeyboardHook.IsHooking)
+                {
+                    MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
+                    return;
+                }
+
+                timer1.Enabled = false;
+                timer2.Enabled = false;
+                timer3.Enabled = false;
+                timer4.Enabled = false;
+            }
+            else
+            {
+                /*if (WindowsFormsApp1_orig.globalhook_start_flag == 1) {
+                    MMFrame.Windows.GlobalHook.KeyboardHook.Start();
+                    WindowsFormsApp1_orig.globalhook_start_flag = 0;
+                }*/
+                if (MMFrame.Windows.GlobalHook.KeyboardHook.IsPaused)
+                {
+                    MMFrame.Windows.GlobalHook.KeyboardHook.AddEvent(hookKeyboardTest);
+                    MMFrame.Windows.GlobalHook.KeyboardHook.Start();
+                    return;
+                }
+
+                timer1.Enabled = true;
+                timer2.Enabled = true;
+                timer3.Enabled = true;
+                timer4.Enabled = true;
             }
 
-            MessageBox.Show("終了しましょう", "メッセージ",
-                    MessageBoxButtons.YesNoCancel, MessageBoxIcon.Exclamation, MessageBoxDefaultButton.Button2);
-            return;
+            //System.Console.WriteLine("flaaag is {0}", WindowsFormsApp1_orig.timer_start_flag);
+        }
+
+
+            private void button2_Click_1(object sender, EventArgs e)
+        {
+            if (MMFrame.Windows.GlobalHook.KeyboardHook.IsHooking)
+            {
+                MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
+                return;
+            }
+
+
+            timer1.Enabled = true;
+
+
+
+            timer2.Enabled = true;
+
+
+
+            timer3.Enabled = true;
+
+            timer4.Enabled = true;
+
+            timer5.Enabled = true;
+
+
+            MMFrame.Windows.GlobalHook.KeyboardHook.AddEvent(hookKeyboardTest);
+
+
+
+
+            MMFrame.Windows.GlobalHook.KeyboardHook.Start();
+            this.Hide();
         }
 
 
@@ -716,6 +823,13 @@ namespace MMFrame
          }*/
     }
 }
+
+
+
+
+
+
+
 
 
 

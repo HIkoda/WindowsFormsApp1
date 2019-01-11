@@ -25,9 +25,10 @@ namespace WindowsFormsApp1
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            //WindowsFormsApp1_orig.timer_start_flag = 1;
             Application.Run(new Form1());
+           //Application.Run(new Form_setup());
 
-            
 
 
             /*using (var img = new IplImage(@"C:\Lenna.jpg")) //while shown windows form, not shown image
