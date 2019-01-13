@@ -19,7 +19,6 @@ namespace WindowsFormsApp1
             InitializeComponent();
 
             WindowsFormsApp1_orig.timer_start_flag = 0;//timer_stop
-            //MMFrame.Windows.GlobalHook.KeyboardHook.Stop();
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -37,21 +36,14 @@ namespace WindowsFormsApp1
             this.log(this, sender, e);
 
             this.Close();
-            //Close();
-            
-            
-            WindowsFormsApp1_orig.standard_touch_value_orig--;
-            WindowsFormsApp1_orig.frontface_check_value_orig--;
+                  
+            //WindowsFormsApp1_orig.standard_touch_value_orig--;
+            //WindowsFormsApp1_orig.frontface_check_value_orig--;
 
-            WindowsFormsApp1_orig.limit_time = 7000;
+            //WindowsFormsApp1_orig.work_limit_time = 7000;
 
-
-            //WindowsFormsApp1_orig.globalhook_start_flag = 1;
             WindowsFormsApp1_orig.timer_start_flag = 1;//timer_restart
-
-            //MMFrame.Windows.GlobalHook.KeyboardHook.Start();
-            /*Form1 newform = new Form1();
-            newform.Show();*/
-        }
+            WindowsFormsApp1_orig.finish_time_flag = 1;//if =1 timer_start  else timer_stop
+    }
     }
 }
